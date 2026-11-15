@@ -2,4 +2,14 @@
 pandas
 scikit-learn
 xgboost
+lightgbm
+catboost
 joblib
+matplotlib
+seaborn
+shap
+optuna
+imbalanced-learn
+jupyter
+ipykernel
+plotly
