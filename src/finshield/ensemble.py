@@ -7,8 +7,8 @@ from sklearn.metrics import roc_auc_score, precision_score, recall_score, f1_sco
 import joblib
 from pathlib import Path
 
-from data import load_transaction_data
-from preprocess import FraudPreprocessor, create_time_aware_split
+from finshield.data import load_transaction_data
+from finshield.preprocess import FraudPreprocessor, create_time_aware_split
 
 
 class VotingEnsemble:

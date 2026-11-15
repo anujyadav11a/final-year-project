@@ -13,3 +13,9 @@ imbalanced-learn
 jupyter
 ipykernel
 plotly
+fastapi
+uvicorn
+pydantic
+python-multipart
+streamlit
+requests
