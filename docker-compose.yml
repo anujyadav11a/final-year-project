@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  finshield:
+    build: .
+    container_name: finshield-app
+    ports:
+      - "8000:8000"
+      - "8501:8501"
+    volumes:
+      - ./models:/app/models
+      - ./data:/app/data
+    environment:
+      - PYTHONPATH=/app/src
+    restart: unless-stopped

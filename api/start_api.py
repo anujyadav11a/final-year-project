@@ -1,8 +1,4 @@
-"""
-Start the FinShield API server
-"""
 import uvicorn
-
 if __name__ == "__main__":
     print("="*60)
     print("Starting FinShield Fraud Detection API")

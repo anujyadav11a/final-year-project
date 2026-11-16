@@ -1,6 +1,3 @@
-"""
-Model explainability using SHAP for FinShield fraud detection.
-"""
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -8,43 +5,22 @@ import shap
 import joblib
 from pathlib import Path
 
-
 def generate_shap_explanations(model, X_sample, feature_names, max_display=20, 
                                output_dir='reports/figures'):
-    """
-    Generate SHAP explanations for the fraud detection model.
-    
-    Parameters:
-    -----------
-    model : trained model
-        XGBoost model
-    X_sample : pd.DataFrame or np.array
-        Sample data for SHAP analysis (typically a subset of test data)
-    feature_names : list
-        List of feature names
-    max_display : int
-        Maximum number of features to display
-    output_dir : str
-        Directory to save SHAP visualizations
-    """
     print("\n" + "="*60)
     print("GENERATING SHAP EXPLANATIONS")
     print("="*60)
-    
-    # Create output directory
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
     
     print(f"\nComputing SHAP values for {len(X_sample)} samples...")
     print("This may take a few minutes...")
     
-    # Create SHAP explainer (TreeExplainer is fast for tree-based models)
     explainer = shap.TreeExplainer(model)
     shap_values = explainer(X_sample)
     
     print("SHAP values computed successfully!")
     
-    # 1. Summary Plot (Feature Importance)
     print("\nGenerating SHAP summary plot...")
     plt.figure(figsize=(12, 8))
     shap.summary_plot(shap_values, X_sample, feature_names=feature_names, 
@@ -55,7 +31,6 @@ def generate_shap_explanations(model, X_sample, feature_names, max_display=20,
     print(f"SHAP summary plot saved to: {summary_path}")
     plt.close()
     
-    # 2. Bar Plot (Mean absolute SHAP values)
     print("Generating SHAP bar plot...")
     plt.figure(figsize=(12, 8))
     shap.plots.bar(shap_values, max_display=max_display, show=False)
@@ -65,13 +40,10 @@ def generate_shap_explanations(model, X_sample, feature_names, max_display=20,
     print(f"SHAP bar plot saved to: {bar_path}")
     plt.close()
     
-    # 3. Waterfall plot for a fraud case
     print("Generating SHAP waterfall plot for fraud example...")
-    # Find a fraud case
     if isinstance(X_sample, pd.DataFrame):
         fraud_idx = None
-        # We need the actual labels to find fraud, so we'll use the first sample
-        fraud_idx = 0  # Just use first sample as example
+        fraud_idx = 0
     else:
         fraud_idx = 0
     
@@ -83,7 +55,6 @@ def generate_shap_explanations(model, X_sample, feature_names, max_display=20,
     print(f"SHAP waterfall plot saved to: {waterfall_path}")
     plt.close()
     
-    # 4. Force plot (interactive HTML)
     print("Generating SHAP force plot...")
     try:
         shap.initjs()
@@ -100,9 +71,7 @@ def generate_shap_explanations(model, X_sample, feature_names, max_display=20,
     except Exception as e:
         print(f"Could not generate force plot: {e}")
     
-    # 5. Dependence plots for top features
     print("\nGenerating SHAP dependence plots for top 3 features...")
-    # Get top 3 most important features
     mean_abs_shap = np.abs(shap_values.values).mean(axis=0)
     top_features_idx = np.argsort(mean_abs_shap)[-3:][::-1]
     
@@ -132,22 +101,7 @@ def generate_shap_explanations(model, X_sample, feature_names, max_display=20,
 
 def explain_single_prediction(model, explainer, X_single, feature_names, 
                               output_dir='reports/figures'):
-    """
-    Explain a single prediction in detail.
-    
-    Parameters:
-    -----------
-    model : trained model
-    explainer : SHAP explainer
-    X_single : single sample (1D array or DataFrame row)
-    feature_names : list of feature names
-    output_dir : str
-        Directory to save visualization
-    """
-    # Compute SHAP values
     shap_values = explainer(X_single)
-    
-    # Get prediction
     prediction = model.predict(X_single)[0]
     probability = model.predict_proba(X_single)[0, 1]
     
@@ -158,7 +112,6 @@ def explain_single_prediction(model, explainer, X_single, feature_names,
     print(f"Fraud Probability: {probability:.4f}")
     print("="*60)
     
-    # Show top contributing features
     shap_vals = shap_values.values[0]
     contributions = pd.DataFrame({
         'feature': feature_names,
@@ -169,7 +122,6 @@ def explain_single_prediction(model, explainer, X_single, feature_names,
     print("\nTop 10 Contributing Features:")
     print(contributions[['feature', 'shap_value']].to_string(index=False))
     
-    # Generate waterfall plot
     plt.figure(figsize=(12, 8))
     shap.plots.waterfall(shap_values[0], max_display=15, show=False)
     plt.tight_layout()
@@ -192,12 +144,10 @@ if __name__ == "__main__":
     print("FINSHIELD MODEL EXPLAINABILITY (SHAP)")
     print("="*60)
     
-    # Load model and preprocessor
     print("\nLoading model and preprocessor...")
     model = joblib.load('models/xgboost_baseline_latest.joblib')
     preprocessor = joblib.load('models/preprocessor_latest.joblib')
     
-    # Load and prepare data
     print("Loading data...")
     df = load_transaction_data()
     train_df, test_df = create_time_aware_split(df, test_size=0.2)
@@ -205,15 +155,12 @@ if __name__ == "__main__":
     print("Preprocessing data...")
     X_test, y_test = preprocessor.fit_transform(test_df)
     
-    # Use a sample of test data for SHAP (to speed up computation)
     sample_size = 1000
     print(f"\nUsing {sample_size} samples for SHAP analysis...")
     
-    # Sample with stratification to include both fraud and non-fraud
     fraud_indices = np.where(y_test == 1)[0]
     non_fraud_indices = np.where(y_test == 0)[0]
     
-    # Take 500 fraud and 500 non-fraud
     n_fraud = min(500, len(fraud_indices))
     n_non_fraud = min(500, len(non_fraud_indices))
     
@@ -227,7 +174,6 @@ if __name__ == "__main__":
     
     print(f"Sample contains {(y_sample == 1).sum()} fraud cases and {(y_sample == 0).sum()} non-fraud cases")
     
-    # Generate SHAP explanations
     shap_values, explainer = generate_shap_explanations(
         model, 
         X_sample, 
@@ -235,7 +181,6 @@ if __name__ == "__main__":
         max_display=20
     )
     
-    # Explain a specific fraud case
     print("\n" + "="*60)
     print("EXPLAINING A SPECIFIC FRAUD CASE")
     print("="*60)

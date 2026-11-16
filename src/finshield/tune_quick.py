@@ -1,7 +1,3 @@
-"""
-Quick hyperparameter tuning for FinShield fraud detection.
-Optimized for faster execution with 10 trials per model.
-"""
 import pandas as pd
 import numpy as np
 import xgboost as xgb
@@ -12,17 +8,14 @@ from sklearn.metrics import roc_auc_score, precision_score, recall_score, f1_sco
 import joblib
 from pathlib import Path
 import time
-
 from data import load_transaction_data
 from preprocess import FraudPreprocessor, create_time_aware_split
 
 
 def tune_xgboost(X_train, y_train, X_val, y_val, n_trials=10):
-    """Quick XGBoost tuning with reduced search space."""
     print(f"\n{'='*60}")
     print("TUNING XGBOOST")
     print(f"{'='*60}")
-    
     def objective(trial):
         params = {
             'objective': 'binary:logistic',
@@ -57,11 +50,9 @@ def tune_xgboost(X_train, y_train, X_val, y_val, n_trials=10):
 
 
 def tune_lightgbm(X_train, y_train, X_val, y_val, n_trials=10):
-    """Quick LightGBM tuning with reduced search space."""
     print(f"\n{'='*60}")
     print("TUNING LIGHTGBM")
     print(f"{'='*60}")
-    
     def objective(trial):
         params = {
             'objective': 'binary',
@@ -96,11 +87,9 @@ def tune_lightgbm(X_train, y_train, X_val, y_val, n_trials=10):
 
 
 def tune_catboost(X_train, y_train, X_val, y_val, n_trials=10):
-    """Quick CatBoost tuning with reduced search space."""
     print(f"\n{'='*60}")
     print("TUNING CATBOOST")
     print(f"{'='*60}")
-    
     def objective(trial):
         params = {
             'iterations': trial.suggest_int('iterations', 150, 350),
@@ -130,9 +119,7 @@ def tune_catboost(X_train, y_train, X_val, y_val, n_trials=10):
 
 
 def train_final_model(model_name, params, X_train, y_train):
-    """Train final model with best params."""
     print(f"\nTraining final {model_name} model...")
-    
     if model_name == 'xgboost':
         params.update({
             'objective': 'binary:logistic',
@@ -173,15 +160,12 @@ if __name__ == "__main__":
     print("FINSHIELD QUICK HYPERPARAMETER TUNING")
     print("="*60)
     
-    # Load data
     print("\nLoading data...")
     df = load_transaction_data()
     
-    # Create splits
     train_df, temp_df = create_time_aware_split(df, test_size=0.2)
     val_df, test_df = create_time_aware_split(temp_df, test_size=0.5)
     
-    # Preprocess
     print("\nPreprocessing...")
     preprocessor = FraudPreprocessor()
     X_train, y_train = preprocessor.fit_transform(train_df)
@@ -193,28 +177,23 @@ if __name__ == "__main__":
     print(f"  Val: {len(X_val):,}")
     print(f"  Test: {len(X_test):,}")
     
-    # Tune models
     results = {}
     
-    # XGBoost
     xgb_params, xgb_val_auc = tune_xgboost(X_train, y_train, X_val, y_val, n_trials=10)
     xgb_model = train_final_model('xgboost', xgb_params, X_train, y_train)
     xgb_test_auc = roc_auc_score(y_test, xgb_model.predict_proba(X_test)[:, 1])
     results['xgboost'] = {'model': xgb_model, 'val_auc': xgb_val_auc, 'test_auc': xgb_test_auc}
     
-    # LightGBM
     lgb_params, lgb_val_auc = tune_lightgbm(X_train, y_train, X_val, y_val, n_trials=10)
     lgb_model = train_final_model('lightgbm', lgb_params, X_train, y_train)
     lgb_test_auc = roc_auc_score(y_test, lgb_model.predict_proba(X_test)[:, 1])
     results['lightgbm'] = {'model': lgb_model, 'val_auc': lgb_val_auc, 'test_auc': lgb_test_auc}
     
-    # CatBoost
     cat_params, cat_val_auc = tune_catboost(X_train, y_train, X_val, y_val, n_trials=10)
     cat_model = train_final_model('catboost', cat_params, X_train, y_train)
     cat_test_auc = roc_auc_score(y_test, cat_model.predict_proba(X_test)[:, 1])
     results['catboost'] = {'model': cat_model, 'val_auc': cat_val_auc, 'test_auc': cat_test_auc}
     
-    # Print summary
     print("\n" + "="*60)
     print("TUNING SUMMARY")
     print("="*60)
@@ -223,15 +202,12 @@ if __name__ == "__main__":
         print(f"  Val AUC: {result['val_auc']:.4f}")
         print(f"  Test AUC: {result['test_auc']:.4f}")
         
-        # Save model
         model_path = Path('models') / f'{name}_tuned_latest.joblib'
         joblib.dump(result['model'], model_path)
         print(f"  Saved: {model_path}")
     
-    # Save preprocessor
     joblib.dump(preprocessor, 'models/preprocessor_tuned_latest.joblib')
     
-    # Find best
     best_name = max(results.keys(), key=lambda k: results[k]['test_auc'])
     print(f"\n🏆 Best: {best_name.upper()} - {results[best_name]['test_auc']:.4f} AUC")
     

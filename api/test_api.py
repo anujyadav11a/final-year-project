@@ -1,21 +1,13 @@
-"""
-API Testing Script for FinShield
-Tests all API endpoints
-"""
 import requests
 import json
 import pandas as pd
 from pathlib import Path
-
-# API base URL
 BASE_URL = "http://localhost:8000"
 
 def test_root():
-    """Test root endpoint"""
     print("\n" + "="*60)
     print("TEST 1: Root Endpoint")
     print("="*60)
-    
     response = requests.get(f"{BASE_URL}/")
     print(f"Status Code: {response.status_code}")
     print(f"Response: {json.dumps(response.json(), indent=2)}")
@@ -25,11 +17,9 @@ def test_root():
 
 
 def test_health():
-    """Test health check endpoint"""
     print("\n" + "="*60)
     print("TEST 2: Health Check")
     print("="*60)
-    
     response = requests.get(f"{BASE_URL}/health")
     print(f"Status Code: {response.status_code}")
     print(f"Response: {json.dumps(response.json(), indent=2)}")
@@ -40,12 +30,9 @@ def test_health():
 
 
 def test_single_prediction():
-    """Test single transaction prediction"""
     print("\n" + "="*60)
     print("TEST 3: Single Prediction")
     print("="*60)
-    
-    # Test transaction data
     transaction = {
         "TransactionDT": 86400,
         "TransactionAmt": 68.5,
@@ -78,31 +65,24 @@ def test_single_prediction():
         
 
 def test_batch_prediction():
-    """Test batch prediction with CSV"""
     print("\n" + "="*60)
     print("TEST 4: Batch Prediction")
     print("="*60)
-    
-    # Load a small sample from the dataset
     data_path = Path(__file__).parent.parent / 'data' / 'raw' / 'train_transaction.csv'
     
     if not data_path.exists():
         print("⚠️ Dataset not found, skipping batch test")
         return
     
-    # Read first 10 rows
     df = pd.read_csv(data_path, nrows=10)
     
-    # Save to temp CSV
     temp_csv = Path(__file__).parent / 'temp_test.csv'
     df.to_csv(temp_csv, index=False)
     
-    # Send to API
     with open(temp_csv, 'rb') as f:
         files = {'file': ('test_transactions.csv', f, 'text/csv')}
         response = requests.post(f"{BASE_URL}/predict/batch", files=files)
     
-    # Clean up
     temp_csv.unlink()
     
     print(f"Status Code: {response.status_code}")
@@ -125,11 +105,9 @@ def test_batch_prediction():
 
 
 def test_stats():
-    """Test statistics endpoint"""
     print("\n" + "="*60)
     print("TEST 5: Model Statistics")
     print("="*60)
-    
     response = requests.get(f"{BASE_URL}/stats")
     print(f"Status Code: {response.status_code}")
     
@@ -145,11 +123,9 @@ def test_stats():
 
 
 def test_fraud_scenarios():
-    """Test various fraud scenarios"""
     print("\n" + "="*60)
     print("TEST 6: Fraud Scenario Testing")
     print("="*60)
-    
     scenarios = [
         {
             "name": "High-value transaction",
@@ -199,15 +175,12 @@ def test_fraud_scenarios():
 
 
 def run_all_tests():
-    """Run all API tests"""
     print("\n" + "="*70)
     print("FINSHIELD API TESTING SUITE")
     print("="*70)
     print("Starting API tests...")
     print(f"API URL: {BASE_URL}")
-    
     try:
-        # Test if API is running
         response = requests.get(f"{BASE_URL}/", timeout=2)
         print("✅ API is running!")
     except requests.exceptions.ConnectionError:
@@ -215,7 +188,6 @@ def run_all_tests():
         print("Please start the API with: python api/main.py")
         return
     
-    # Run tests
     tests = [
         test_root,
         test_health,
@@ -236,7 +208,6 @@ def run_all_tests():
             print(f"❌ Test failed: {e}")
             failed += 1
     
-    # Summary
     print("\n" + "="*70)
     print("TEST SUMMARY")
     print("="*70)

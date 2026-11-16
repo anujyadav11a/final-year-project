@@ -1,6 +1,3 @@
-"""
-Model evaluation and visualization for FinShield fraud detection.
-"""
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -15,23 +12,9 @@ from sklearn.metrics import (
 import joblib
 from pathlib import Path
 
-
 def plot_roc_curve(y_true, y_pred_proba, save_path='reports/figures/roc_curve.png'):
-    """
-    Plot ROC curve.
-    
-    Parameters:
-    -----------
-    y_true : array
-        True labels
-    y_pred_proba : array
-        Predicted probabilities
-    save_path : str
-        Path to save the plot
-    """
     fpr, tpr, thresholds = roc_curve(y_true, y_pred_proba)
     roc_auc = auc(fpr, tpr)
-    
     plt.figure(figsize=(10, 8))
     plt.plot(fpr, tpr, color='darkorange', lw=2, label=f'ROC curve (AUC = {roc_auc:.4f})')
     plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--', label='Random Classifier')
@@ -43,7 +26,6 @@ def plot_roc_curve(y_true, y_pred_proba, save_path='reports/figures/roc_curve.pn
     plt.legend(loc="lower right", fontsize=11)
     plt.grid(alpha=0.3)
     
-    # Create directory if it doesn't exist
     Path(save_path).parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(save_path, dpi=300, bbox_inches='tight')
     print(f"ROC curve saved to: {save_path}")
@@ -51,20 +33,7 @@ def plot_roc_curve(y_true, y_pred_proba, save_path='reports/figures/roc_curve.pn
 
 
 def plot_precision_recall_curve(y_true, y_pred_proba, save_path='reports/figures/precision_recall_curve.png'):
-    """
-    Plot Precision-Recall curve.
-    
-    Parameters:
-    -----------
-    y_true : array
-        True labels
-    y_pred_proba : array
-        Predicted probabilities
-    save_path : str
-        Path to save the plot
-    """
     precision, recall, thresholds = precision_recall_curve(y_true, y_pred_proba)
-    
     plt.figure(figsize=(10, 8))
     plt.plot(recall, precision, color='blue', lw=2, label='Precision-Recall curve')
     plt.xlabel('Recall', fontsize=12)
@@ -73,7 +42,6 @@ def plot_precision_recall_curve(y_true, y_pred_proba, save_path='reports/figures
     plt.legend(loc="best", fontsize=11)
     plt.grid(alpha=0.3)
     
-    # Add baseline (fraud rate)
     fraud_rate = y_true.mean()
     plt.axhline(y=fraud_rate, color='r', linestyle='--', label=f'Baseline (fraud rate = {fraud_rate:.4f})')
     plt.legend(loc="best", fontsize=11)
@@ -85,20 +53,7 @@ def plot_precision_recall_curve(y_true, y_pred_proba, save_path='reports/figures
 
 
 def plot_confusion_matrix(y_true, y_pred, save_path='reports/figures/confusion_matrix.png'):
-    """
-    Plot confusion matrix heatmap.
-    
-    Parameters:
-    -----------
-    y_true : array
-        True labels
-    y_pred : array
-        Predicted labels
-    save_path : str
-        Path to save the plot
-    """
     cm = confusion_matrix(y_true, y_pred)
-    
     plt.figure(figsize=(10, 8))
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', cbar=True,
                 xticklabels=['Non-Fraud', 'Fraud'],
@@ -107,7 +62,6 @@ def plot_confusion_matrix(y_true, y_pred, save_path='reports/figures/confusion_m
     plt.xlabel('Predicted', fontsize=12)
     plt.title('Confusion Matrix', fontsize=14, fontweight='bold')
     
-    # Add percentages
     total = cm.sum()
     for i in range(2):
         for j in range(2):
@@ -122,27 +76,11 @@ def plot_confusion_matrix(y_true, y_pred, save_path='reports/figures/confusion_m
 
 
 def plot_feature_importance(model, feature_names, top_n=20, save_path='reports/figures/feature_importance.png'):
-    """
-    Plot top N important features.
-    
-    Parameters:
-    -----------
-    model : trained model
-        XGBoost model
-    feature_names : list
-        List of feature names
-    top_n : int
-        Number of top features to plot
-    save_path : str
-        Path to save the plot
-    """
-    # Get feature importance
     importance = model.feature_importances_
     feature_importance_df = pd.DataFrame({
         'feature': feature_names,
         'importance': importance
     }).sort_values('importance', ascending=False).head(top_n)
-    
     plt.figure(figsize=(12, 8))
     sns.barplot(data=feature_importance_df, y='feature', x='importance', palette='viridis')
     plt.xlabel('Importance Score', fontsize=12)
@@ -159,21 +97,7 @@ def plot_feature_importance(model, feature_names, top_n=20, save_path='reports/f
 
 
 def plot_prediction_distribution(y_true, y_pred_proba, save_path='reports/figures/prediction_distribution.png'):
-    """
-    Plot distribution of predicted probabilities for fraud and non-fraud.
-    
-    Parameters:
-    -----------
-    y_true : array
-        True labels
-    y_pred_proba : array
-        Predicted probabilities
-    save_path : str
-        Path to save the plot
-    """
     plt.figure(figsize=(12, 6))
-    
-    # Plot distributions
     plt.hist(y_pred_proba[y_true == 0], bins=50, alpha=0.6, label='Non-Fraud', color='blue', density=True)
     plt.hist(y_pred_proba[y_true == 1], bins=50, alpha=0.6, label='Fraud', color='red', density=True)
     
@@ -190,31 +114,15 @@ def plot_prediction_distribution(y_true, y_pred_proba, save_path='reports/figure
 
 
 def generate_evaluation_report(model, X_test, y_test, feature_names, output_dir='reports'):
-    """
-    Generate comprehensive evaluation report with all visualizations.
-    
-    Parameters:
-    -----------
-    model : trained model
-    X_test : test features
-    y_test : test labels
-    feature_names : list of feature names
-    output_dir : str
-        Directory to save reports
-    """
     print("\n" + "="*60)
     print("GENERATING EVALUATION REPORT")
     print("="*60)
-    
-    # Make predictions
     y_pred = model.predict(X_test)
     y_pred_proba = model.predict_proba(X_test)[:, 1]
     
-    # Create figures directory
     figures_dir = Path(output_dir) / 'figures'
     figures_dir.mkdir(parents=True, exist_ok=True)
     
-    # Generate all plots
     print("\nGenerating visualizations...")
     plot_roc_curve(y_test, y_pred_proba, figures_dir / 'roc_curve.png')
     plot_precision_recall_curve(y_test, y_pred_proba, figures_dir / 'precision_recall_curve.png')
@@ -223,7 +131,6 @@ def generate_evaluation_report(model, X_test, y_test, feature_names, output_dir=
                                                    save_path=figures_dir / 'feature_importance.png')
     plot_prediction_distribution(y_test, y_pred_proba, figures_dir / 'prediction_distribution.png')
     
-    # Save feature importance to CSV
     feature_importance_path = Path(output_dir) / 'feature_importance.csv'
     feature_importance_df.to_csv(feature_importance_path, index=False)
     print(f"\nFeature importance saved to: {feature_importance_path}")
@@ -248,12 +155,10 @@ if __name__ == "__main__":
     print("FINSHIELD MODEL EVALUATION")
     print("="*60)
     
-    # Load the latest model and preprocessor
     print("\nLoading model and preprocessor...")
     model = joblib.load('models/xgboost_baseline_latest.joblib')
     preprocessor = joblib.load('models/preprocessor_latest.joblib')
     
-    # Load and prepare test data
     print("\nLoading test data...")
     df = load_transaction_data()
     train_df, test_df = create_time_aware_split(df, test_size=0.2)
@@ -261,7 +166,6 @@ if __name__ == "__main__":
     print("\nPreprocessing test data...")
     X_test, y_test = preprocessor.fit_transform(test_df)
     
-    # Generate evaluation report
     results = generate_evaluation_report(
         model, 
         X_test, 

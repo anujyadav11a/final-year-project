@@ -1,7 +1,3 @@
-"""
-FinShield Fraud Detection API - Simplified Version
-Uses individual models directly
-"""
 from fastapi import FastAPI, HTTPException, File, UploadFile
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict
@@ -9,22 +5,18 @@ import joblib
 import pandas as pd
 import numpy as np
 from pathlib import Path
-
-# Initialize FastAPI app
 app = FastAPI(
     title="FinShield Fraud Detection API",
     description="Real-time fraud detection for online transactions",
     version="1.0.0"
 )
 
-# Load models at startup
 MODEL_PATH = Path(__file__).parent.parent / 'models'
 xgb_model = None
 lgb_model = None
 cat_model = None
 preprocessor = None
 
-# Ensemble weights (from tuning)
 WEIGHTS = {
     'xgboost': 0.3358,
     'lightgbm': 0.3330,
@@ -34,13 +26,11 @@ WEIGHTS = {
 
 @app.on_event("startup")
 async def load_models():
-    """Load models on startup"""
     global xgb_model, lgb_model, cat_model, preprocessor
     try:
-        # Try baseline model first (should work)
         xgb_model = joblib.load(MODEL_PATH / 'xgboost_baseline_latest.joblib')
-        lgb_model = xgb_model  # Use same model for now
-        cat_model = xgb_model  # Use same model for now
+        lgb_model = xgb_model
+        cat_model = xgb_model
         preprocessor = joblib.load(MODEL_PATH / 'preprocessor_latest.joblib')
         print("✅ Models loaded successfully!")
         print(f"   - Model type: {type(xgb_model).__name__}")
@@ -50,9 +40,7 @@ async def load_models():
         traceback.print_exc()
         raise
 
-
 class PredictionResponse(BaseModel):
-    """Prediction response"""
     transaction_id: Optional[str] = None
     probability: float
     prediction: int
@@ -60,35 +48,18 @@ class PredictionResponse(BaseModel):
     confidence: str
     risk_level: str
 
-
 class BatchPredictionResponse(BaseModel):
-    """Batch prediction response"""
     total_transactions: int
     fraud_count: int
     fraud_percentage: float
     predictions: List[PredictionResponse]
 
-
 def ensemble_predict(X):
-    """
-    Make prediction
-    
-    Args:
-        X: preprocessed features
-        
-    Returns:
-        probabilities: fraud probabilities
-    """
-    # Use baseline model
     proba = xgb_model.predict_proba(X)[:, 1]
     return proba
 
-
 def format_prediction(probability, transaction_id="unknown"):
-    """Format prediction response"""
     prediction = int(probability >= 0.5)
-    
-    # Calculate confidence
     if probability < 0.3 or probability > 0.7:
         confidence = "high"
     elif probability < 0.4 or probability > 0.6:
@@ -96,7 +67,6 @@ def format_prediction(probability, transaction_id="unknown"):
     else:
         confidence = "low"
     
-    # Calculate risk level
     if probability >= 0.8:
         risk_level = "critical"
     elif probability >= 0.6:
@@ -118,7 +88,6 @@ def format_prediction(probability, transaction_id="unknown"):
 
 @app.get("/")
 async def root():
-    """Root endpoint"""
     return {
         "message": "FinShield Fraud Detection API",
         "version": "1.0.0",
@@ -132,10 +101,8 @@ async def root():
         }
     }
 
-
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
     return {
         "status": "healthy" if all([xgb_model, lgb_model, cat_model]) else "unhealthy",
         "models_loaded": {
@@ -147,34 +114,18 @@ async def health_check():
         "version": "1.0.0"
     }
 
-
 @app.post("/predict", response_model=PredictionResponse)
 async def predict_single(transaction: Dict):
-    """
-    Predict fraud for a single transaction
-    
-    Args:
-        transaction: Dictionary with transaction features
-        
-    Returns:
-        Prediction with probability and risk assessment
-    """
     try:
-        # Convert to DataFrame
         df = pd.DataFrame([transaction])
-        
-        # Ensure TransactionID exists
         tid = transaction.get('TransactionID', 'unknown')
         if 'TransactionID' not in df.columns:
             df['TransactionID'] = 0
         
-        # Add isFraud column (required by preprocessor)
         df['isFraud'] = 0
         
-        # Preprocess
         X, _ = preprocessor.fit_transform(df)
         
-        # Ensemble prediction
         probability = ensemble_predict(X)[0]
         
         return format_prediction(probability, tid)
@@ -185,27 +136,17 @@ async def predict_single(transaction: Dict):
 
 @app.post("/predict/batch", response_model=BatchPredictionResponse)
 async def predict_batch(file: UploadFile = File(...)):
-    """
-    Predict fraud for multiple transactions from CSV file
-    """
     try:
-        # Read CSV
         df = pd.read_csv(file.file)
-        
-        # Store original TransactionIDs
         transaction_ids = df['TransactionID'].tolist() if 'TransactionID' in df.columns else list(range(len(df)))
         
-        # Add isFraud if not present
         if 'isFraud' not in df.columns:
             df['isFraud'] = 0
         
-        # Preprocess
         X, _ = preprocessor.fit_transform(df)
         
-        # Ensemble predictions
         probabilities = ensemble_predict(X)
         
-        # Format results
         results = [
             format_prediction(prob, tid)
             for prob, tid in zip(probabilities, transaction_ids)
@@ -226,7 +167,6 @@ async def predict_batch(file: UploadFile = File(...)):
 
 @app.get("/stats")
 async def get_stats():
-    """Get model statistics"""
     return {
         "model_info": {
             "type": "Weighted Ensemble",
@@ -248,7 +188,6 @@ async def get_stats():
             "imbalance_ratio": "27:1"
         }
     }
-
 
 if __name__ == "__main__":
     import uvicorn

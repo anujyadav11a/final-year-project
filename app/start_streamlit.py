@@ -1,15 +1,8 @@
-"""
-Start script for FinShield Streamlit application
-"""
-
 import subprocess
 import sys
 import os
 
 def main():
-    """Start the Streamlit application"""
-    
-    # Get the directory where this script is located
     script_dir = os.path.dirname(os.path.abspath(__file__))
     app_path = os.path.join(script_dir, "streamlit_app.py")
     
@@ -19,7 +12,6 @@ def main():
     print("\n⚠️  Make sure the API is running at http://localhost:8000")
     print("   Run: python api\\start_api.py\n")
     
-    # Start Streamlit
     try:
         subprocess.run([
             sys.executable, "-m", "streamlit", "run",
